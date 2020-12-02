@@ -1,11 +1,12 @@
 from torchvision import datasets
 import argparse, os
 import numpy as np
+import pickle as pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", "-s", default=1, type=int, help="random seed")
-parser.add_argument("--dataset", "-d", default="svhn", type=str, help="dataset name : [svhn, cifar10]")
-parser.add_argument("--nlabels", "-n", default=1000, type=int, help="the number of labeled data")
+parser.add_argument("--dataset", "-d", default="cifar10", type=str, help="dataset name : [svhn, cifar10]")
+parser.add_argument("--nlabels", "-n", default=4000, type=int, help="the number of labeled data")
 args = parser.parse_args()
 
 COUNTS = {
@@ -38,10 +39,13 @@ def split_l_u(train_set, n_labels):
         l_images += [c_images[:n_labels_per_cls]]
         l_labels += [c_labels[:n_labels_per_cls]]
         u_images += [c_images[n_labels_per_cls:]]
-        u_labels += [np.zeros_like(c_labels[n_labels_per_cls:]) - 1] # dammy label
+        u_labels += [c_labels[n_labels_per_cls:]]
+
+        # u_labels += [np.zeros_like(c_labels[n_labels_per_cls:]) - 1] # dammy label
     l_train_set = {"images": np.concatenate(l_images, 0), "labels": np.concatenate(l_labels, 0)}
     u_train_set = {"images": np.concatenate(u_images, 0), "labels": np.concatenate(u_labels, 0)}
     return l_train_set, u_train_set
+
 
 def _load_svhn():
     splits = {}
@@ -52,6 +56,7 @@ def _load_svhn():
         data["labels"] = tv_data.labels
         splits[split] = data
     return splits.values()
+
 
 def _load_cifar10():
     splits = {}
@@ -95,14 +100,15 @@ if args.dataset == "svhn":
     train_set, test_set, extra_set = _load_svhn()
 elif args.dataset == "cifar10":
     train_set, test_set = _load_cifar10()
-    train_set["images"] = gcn(train_set["images"])
-    test_set["images"] = gcn(test_set["images"])
-    mean, zca_decomp = get_zca_normalization_param(train_set["images"])
-    train_set["images"] = zca_normalization(train_set["images"], mean, zca_decomp)
-    test_set["images"] = zca_normalization(test_set["images"], mean, zca_decomp)
+    images = gcn(train_set["images"])
+    # test_set["images"] = gcn(test_set["images"])
+    mean, zca_decomp = get_zca_normalization_param(images)
+    pkl.dump((mean, zca_decomp), open('zca_component.npy', 'wb'))
+    # train_set["images"] = zca_normalization(train_set["images"], mean, zca_decomp)
+    # test_set["images"] = zca_normalization(test_set["images"], mean, zca_decomp)
     # N x H x W x C -> N x C x H x W
-    train_set["images"] = np.transpose(train_set["images"], (0,3,1,2))
-    test_set["images"] = np.transpose(test_set["images"], (0,3,1,2))
+    # train_set["images"] = np.transpose(train_set["images"], (0,3,1,2))
+    # test_set["images"] = np.transpose(test_set["images"], (0,3,1,2))
 
 # permute index of training set
 indices = rng.permutation(len(train_set["images"]))

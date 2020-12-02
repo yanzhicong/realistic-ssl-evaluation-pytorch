@@ -2,12 +2,15 @@ from lib.datasets import svhn, cifar10
 import numpy as np
 
 shared_config = {
-    "iteration" : 500000,
+    "iteration" : 550000,
     "warmup" : 200000,
-    "lr_decay_iter" : 400000,
+    "lr_decay_iter" : [400000, 500000, 530000],
     "lr_decay_factor" : 0.2,
     "batch_size" : 100,
 }
+
+
+
 ### dataset ###
 svhn_config = {
     "transform" : [False, True, False], # flip, rnd crop, gaussian noise
